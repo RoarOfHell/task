@@ -66,7 +66,21 @@ namespace Task.Connector
                 return Enumerable.Empty<Property>();
             }
 
-            var userProperties = userEntityType.GetProperties().Select(p => new Property
+            var userProperties = userEntityType.GetProperties().Where(p => !p.IsPrimaryKey()).Select(p => new Property
+            (
+                p.GetColumnName(),
+                p.PropertyInfo?.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "None description"
+            ));
+
+            var passwordEntityType = _context.Model.FindEntityType(typeof(PasswordsModel));
+
+            if (passwordEntityType == null)
+            {
+                Logger.Warn("PasswordsModel entity type not found in the model.");
+                return Enumerable.Empty<Property>();
+            }
+
+            var passwordProperties = passwordEntityType.GetProperties().Where(p => !p.IsPrimaryKey() && p.Name != "UserId").Select(p => new Property
             (
                 p.GetColumnName(),
                 p.PropertyInfo?.GetCustomAttribute<DescriptionAttribute>()?.Description ?? "None description"
@@ -74,7 +88,7 @@ namespace Task.Connector
 
             Logger.Warn($"All properties have been successfully obtained");
 
-            return userProperties ?? Enumerable.Empty<Property>();
+            return Enumerable.Union(userProperties ?? Enumerable.Empty<Property>(), passwordProperties ?? Enumerable.Empty<Property>());
         }
 
         public IEnumerable<UserProperty> GetUserProperties(string userLogin)
